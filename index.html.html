@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>뱅크샐러드 생애주기 KPI 대시보드</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js">
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g:#00C471;--gd:#009E5A;--gl:#E6F9F1;--gll:#F4FDF9;
+  --red:#EF4444;--redl:#FEF2F2;--redb:#FCA5A5;
+  --amb:#F59E0B;--ambl:#FFFBEB;--ambb:#FDE68A;
+  --blu:#3B82F6;--blul:#EFF6FF;--blub:#BFDBFE;
+  --pur:#8B5CF6;--purl:#F5F3FF;
+  --bg:#F3F4F6;--card:#FFFFFF;--bdr:#E5E7EB;
+  --txt:#111827;--sub:#6B7280;--lite:#9CA3AF;
+  --r:12px;--sh:0 1px 3px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.06);
+}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--txt);font-size:13.5px;line-height:1.6}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:200;height:54px;background:rgba(255,255,255,.94);
+  backdrop-filter:blur(14px);border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.nav-brand{display:flex;align-items:center;gap:9px}
+.nav-logo{width:28px;height:28px;border-radius:7px;background:var(--g);
+  display:grid;place-items:center;font-size:15px}
+.nav-name{font-size:14px;font-weight:700;color:var(--g)}
+.nav-desc{font-size:11.5px;color:var(--sub);margin-left:3px}
+.nav-tabs{display:flex;gap:2px}
+.nav-tab{padding:5px 13px;border-radius:7px;border:none;background:none;
+  font-family:inherit;font-size:12.5px;font-weight:500;color:var(--sub);cursor:pointer;transition:.15s}
+.nav-tab.on,.nav-tab:hover{background:var(--gl);color:var(--gd)}
+.nav-badge{font-size:10.5px;padding:2px 9px;border-radius:99px;
+  background:var(--gl);color:var(--gd);font-weight:600}
+
+/* LAYOUT */
+.pg{display:none;padding:24px 28px;max-width:1360px;margin:0 auto}
+.pg.on{display:block}
+.pg-head{margin-bottom:20px}
+.pg-tag{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--sub);margin-bottom:5px}
+.pg-title{font-size:20px;font-weight:700;color:var(--txt)}
+.pg-sub{font-size:12.5px;color:var(--sub);margin-top:3px}
+
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--bdr);box-shadow:var(--sh);padding:18px}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--sub);margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.sep{height:1px;background:var(--bdr);margin:16px 0}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.kpi{background:var(--card);border-radius:10px;border:1px solid var(--bdr);
+  box-shadow:var(--sh);padding:14px 16px;position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--g)}
+.kpi.red::after{background:var(--red)}.kpi.amb::after{background:var(--amb)}.kpi.blu::after{background:var(--blu)}
+.kpi-lbl{font-size:11px;color:var(--sub);margin-bottom:5px;font-weight:500}
+.kpi-val{font-size:22px;font-weight:700;color:var(--txt);font-family:'DM Mono',monospace;line-height:1.2}
+.kpi-sub{font-size:10.5px;color:var(--lite);margin-top:3px}
+
+/* ── DUAL INPUT (slider + number) ────────────────────── */
+.params-wrap{background:var(--gll);border:1px solid #C8EDD9;border-radius:var(--r);
+  padding:16px 18px;margin-bottom:18px}
+.params-head{font-size:11.5px;font-weight:700;color:var(--gd);
+  display:flex;align-items:center;gap:6px;margin-bottom:14px}
+.params-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.param-group{background:white;border-radius:8px;border:1px solid var(--bdr);padding:10px 12px}
+.param-group-title{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--sub);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--bdr)}
+.param{margin-bottom:10px}
+.param:last-child{margin-bottom:0}
+.param-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.param-lbl{font-size:12px;color:var(--sub);font-weight:500}
+.param-right{display:flex;align-items:center;gap:6px}
+.num-in{width:72px;height:26px;border:1px solid var(--bdr);border-radius:6px;
+  font-family:'DM Mono',monospace;font-size:12px;font-weight:500;color:var(--gd);
+  text-align:right;padding:0 8px;outline:none;background:white;
+  transition:.15s}
+.num-in:focus{border-color:var(--g);box-shadow:0 0 0 2px rgba(0,196,113,.15)}
+.param-unit{font-size:10.5px;color:var(--lite);font-weight:400}
+input[type=range]{width:100%;height:4px;border-radius:2px;outline:none;border:none;
+  -webkit-appearance:none;cursor:pointer;
+  background:linear-gradient(to right,var(--g) 0%,var(--g) var(--p,50%),#E5E7EB var(--p,50%),#E5E7EB 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;
+  width:15px;height:15px;border-radius:50%;background:var(--g);
+  border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+
+/* ── INNER TABS ──────────────────────────────────────── */
+.itabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+.itab{padding:5px 13px;border-radius:7px;border:1px solid var(--bdr);background:white;
+  font-family:inherit;font-size:12px;font-weight:600;color:var(--sub);cursor:pointer;transition:.15s}
+.itab.on{background:var(--g);color:white;border-color:var(--g)}
+.ipanel{display:none}.ipanel.on{display:block}
+
+/* ── RETENTION SPECIFIC ──────────────────────────────── */
+.cohort-selector{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.cohort-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:9px;
+  border:1.5px solid var(--bdr);background:white;font-family:inherit;font-size:12.5px;
+  font-weight:600;color:var(--sub);cursor:pointer;transition:.15s}
+.cohort-btn .cb-icon{font-size:16px}
+.cohort-btn.on{border-color:var(--g);background:var(--gl);color:var(--gd)}
+.cohort-btn:hover:not(.on){background:var(--bg)}
+
+.stage-timeline{display:flex;align-items:flex-start;position:relative;margin:18px 0 22px;padding:0 20px}
+.stage-timeline::before{content:'';position:absolute;top:22px;left:20px;right:20px;
+  height:2px;background:linear-gradient(to right,var(--g),#86EFAC,var(--gd))}
+.stage{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+.stage-dot{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  font-size:16px;border:3px solid white;position:relative;z-index:2;cursor:default;
+  transition:transform .2s}
+.stage-dot:hover{transform:scale(1.1)}
+.stage.ok .stage-dot{background:var(--g)}
+.stage.warn .stage-dot{background:var(--amb)}
+.stage.drop .stage-dot{background:var(--red)}
+.stage.gray .stage-dot{background:var(--lite)}
+.stage-lbl{font-size:10px;font-weight:700;color:var(--sub);text-align:center;max-width:70px}
+.stage-rate{font-size:13px;font-weight:700;font-family:'DM Mono';margin-top:2px}
+.stage.ok   .stage-rate{color:var(--gd)}
+.stage.warn .stage-rate{color:var(--amb)}
+.stage.drop .stage-rate{color:var(--red)}
+.stage.gray .stage-rate{color:var(--sub)}
+
+.drop-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;
+  font-size:11px;font-weight:700}
+.db-red{background:var(--redl);color:var(--red);border:1px solid var(--redb)}
+.db-amb{background:var(--ambl);color:#92400E;border:1px solid var(--ambb)}
+.db-grn{background:var(--gl);color:var(--gd);border:1px solid #86EFAC}
+
+/* ── CHURN SPECIFIC ──────────────────────────────────── */
+.risk-matrix{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.risk-card{border-radius:10px;padding:14px;border:1.5px solid var(--bdr)}
+.risk-card.high{border-color:var(--redb);background:var(--redl)}
+.risk-card.mid {border-color:var(--ambb);background:var(--ambl)}
+.risk-card.low {border-color:#86EFAC;background:var(--gl)}
+.risk-card.safe{border-color:var(--blub);background:var(--blul)}
+.risk-title{font-size:11.5px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.risk-n{font-size:26px;font-weight:700;font-family:'DM Mono';line-height:1.1}
+.risk-sub{font-size:10.5px;color:var(--sub);margin-top:3px}
+.action-badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;
+  font-weight:600;margin-top:6px}
+
+.interv-table{width:100%;border-collapse:collapse;font-size:12px}
+.interv-table th{background:var(--g);color:white;padding:9px 12px;text-align:left;font-weight:700;font-size:11.5px}
+.interv-table th:first-child{border-radius:7px 0 0 0}.interv-table th:last-child{border-radius:0 7px 0 0}
+.interv-table td{padding:9px 12px;border-bottom:1px solid var(--bdr);vertical-align:top}
+.interv-table tr:last-child td{border-bottom:none}
+.interv-table tr:nth-child(even) td{background:var(--gll)}
+.tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:5px;font-weight:700;margin-bottom:2px}
+.tag-r{background:var(--redl);color:var(--red)}.tag-a{background:var(--ambl);color:#92400E}
+.tag-g{background:var(--gl);color:var(--gd)}.tag-b{background:var(--blul);color:#1D4ED8}
+
+/* ── REVENUE CATEGORY PANELS ─────────────────────────── */
+.rev-cats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:18px}
+.rev-cat{background:white;border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden}
+.rev-cat-head{padding:11px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;
+  border-bottom:1px solid var(--bdr);background:var(--bg);transition:.15s}
+.rev-cat-head:hover{background:var(--gl)}
+.rev-cat-icon{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;
+  font-size:14px;flex-shrink:0}
+.rev-cat-name{font-size:13px;font-weight:700;flex:1}
+.rev-cat-chev{font-size:11px;color:var(--sub);transition:.2s}
+.rev-cat.open .rev-cat-chev{transform:rotate(180deg)}
+.rev-cat-body{padding:12px 14px;display:none}
+.rev-cat.open .rev-cat-body{display:block}
+
+/* ── FUNNEL ──────────────────────────────────────────── */
+.funnelw{display:flex;flex-direction:column;align-items:center;gap:2px}
+.fbar{border-radius:7px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 14px;height:40px;color:white;font-size:12px;font-weight:600;transition:.3s}
+.fbar span:last-child{font-family:'DM Mono';font-size:12.5px}
+.fdown{font-size:10.5px;color:var(--lite);line-height:1}
+
+/* ── VERDICT STRIP ───────────────────────────────────── */
+.vstrip{border-radius:9px;padding:9px 13px;font-size:12.5px;
+  display:flex;align-items:center;gap:7px;margin-top:10px}
+.vs-red{background:var(--redl);color:var(--red);border:1px solid var(--redb)}
+.vs-amb{background:var(--ambl);color:#92400E;border:1px solid var(--ambb)}
+.vs-grn{background:var(--gl);color:var(--gd);border:1px solid #86EFAC}
+
+/* ── ROADMAP ─────────────────────────────────────────── */
+.phase-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.phase{border-radius:var(--r);border:1px solid var(--bdr);background:white;overflow:hidden}
+.phase-hd{padding:13px 16px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--bdr)}
+.ph-ico{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:17px;flex-shrink:0}
+.ph-name{font-size:14px;font-weight:700}
+.ph-period{font-size:11px;color:var(--sub)}
+.phase-body{padding:14px 16px}
+.task{display:flex;gap:7px;font-size:12px;color:var(--sub);margin-bottom:9px;
+  padding:8px 10px;border-radius:7px;background:var(--bg);align-items:flex-start}
+.task:last-of-type{margin-bottom:0}
+.tw{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap;margin-top:1px;flex-shrink:0}
+.tw1{background:var(--gl);color:var(--gd)}.tw2{background:#D1FAE5;color:#065F46}.tw3{background:#A7F3D0;color:#064E3B}
+.kpi-tgts{margin-top:12px;display:flex;flex-direction:column;gap:5px}
+.kt{display:flex;justify-content:space-between;align-items:center;
+  padding:5px 9px;border-radius:7px;font-size:11.5px}
+.kt-r{background:var(--redl)}.kt-a{background:var(--ambl)}.kt-g{background:var(--gl)}
+.kt-v{font-family:'DM Mono';font-weight:700;font-size:12px}
+.kt-r .kt-v{color:var(--red)}.kt-a .kt-v{color:var(--amb)}.kt-g .kt-v{color:var(--gd)}
+
+/* ── JOURNEY RAIL ────────────────────────────────────── */
+.journey{display:flex;align-items:flex-start;position:relative;margin:16px 0;padding:0 16px}
+.journey::before{content:'';position:absolute;top:20px;left:16px;right:16px;
+  height:1px;background:repeating-linear-gradient(to right,var(--g) 0,var(--g) 6px,transparent 6px,transparent 12px)}
+.jstage{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;z-index:1}
+.jico{width:40px;height:40px;border-radius:50%;border:2px solid var(--g);
+  background:white;display:grid;place-items:center;font-size:17px}
+.jlbl{font-size:11.5px;font-weight:700;color:var(--txt);text-align:center}
+.jsub{font-size:10px;color:var(--sub)}
+
+@media(max-width:900px){
+  .kpi-strip{grid-template-columns:repeat(3,1fr)}
+  .g2,.g3,.g4,.phase-row,.rev-cats,.risk-matrix{grid-template-columns:1fr}
+  .pg{padding:14px 16px}
+  .params-grid{grid-template-columns:1fr 1fr}
+}
+
+/* ── Chart containers (fixes responsive height growth bug) ── */
+.cc { position: relative; width: 100%; }
+.cc-s { height: 200px; }
+.cc-m { height: 240px; }
+.cc-l { height: 270px; }
+.cc canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
+
+/* ── Roadmap data cards ──────────────────────── */
+.rm-data-card{background:white;border-radius:10px;border:1px solid var(--bdr);
+  padding:14px;box-shadow:var(--sh)}
+.rm-dtype{font-size:11.5px;font-weight:700;margin-bottom:10px}
+.rm-list{list-style:none;display:flex;flex-direction:column;gap:6px}
+.rm-list li{font-size:12px;color:var(--sub);padding-left:12px;position:relative;line-height:1.45}
+.rm-list li::before{content:'·';position:absolute;left:0;color:var(--lite);font-size:14px;line-height:1.2}
+.rm-question-box{background:var(--gll);border:1px solid #C8EDD9;border-radius:10px;padding:14px 16px}
+.rm-q-title{font-size:11.5px;font-weight:700;color:var(--gd);margin-bottom:10px}
+.rm-q-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rm-q{font-size:12px;color:var(--sub);background:white;border-radius:8px;
+  padding:10px 12px;border:1px solid var(--bdr);line-height:1.55}
+.rm-q strong{color:var(--txt)}
+.rm-panel{display:none}.rm-panel.on{display:block}
+.rm-phase-q{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;
+  text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bdr)}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABlAGYDASIAAhEBAxEB/8QAHAABAAMAAwEBAAAAAAAAAAAAAAYHCAMEBQEJ/8QAPxAAAQMDAgMEBQoCCwAAAAAAAQACAwQFEQYhBxIxE0FRgQgUImFxFRYYI1WCkZSh0SWxMjVCUlZicpKT0vD/xAAbAQEAAQUBAAAAAAAAAAAAAAAABQIDBAYHAf/EAC8RAAIBAwMCAgkFAQAAAAAAAAABAgMEBREhMQYSUWETFEFxgZGhsdEjMmLh8PH/2gAMAwEAAhEDEQA/AIT6I/o5x8Q4RrLWXbRabjkLKWlYSx9c9vUk90Y6ZG7jkZGN916W01p/Sts+TNN2WgtFHzF5hpIGxtLj1JwNz7yvukLDQaW0ta9OWtrxRW2ljpoec5cWsaACT4nGSvVQBERAEREAREQBERAFBOKPCPQPEehni1JYKV9ZIwhlxhYI6qJ2AA4SDc4wNnZGw2U7RAflRx54W3jhPriWwXF5qaSVva2+tDQ0VMWcc2MnlcDsW52+BBRfoN6RvCSn4uaYt1qfWRUU9DW+sMmewu9ksc1zdiDuS0/dRAWiiIgC6V4ulDaaX1munETCcNGMlx8AO9d1U5revnr9SVfauPJBI6GNmdmhpx+p3UD1DmHirZTgtZSei8PeyUxWPV7W7ZPRLdk4g17Y5KnsnCpij7pXR+yfIHI/BSelqIKqBk9NKyWJ4y17DkFUKpxwnuD2V1TbHu+rkZ2rBvs4HBx4bH9FrmB6suLm6jb3KWkuGttH/tiXyeCpUaDq0W9uUWMiLPepfSBu1Jfq2jtunaL1ammfC11RM4vcWuLSfZ2GcdF1PG4i6yUpRt466c7pfc02vcU6CTm+TQiLNf0idSf4etP/ACyKfcF+K9Xrm81VouFohpJ4YDUMlglJYWhzW8pB3zl3XKz7vpfJWlGVarBdsed0Wqd/RqSUYvdlrIiLXjMCIiAIiIAqp4h2Segu81eyNzqSpd2nOBsxx6gn47+atZfHta9pa9oc09QRkFRGaxFPK2/opPRrdPwf4M/HX8rGr3pap8ooJWPwwslVRslulU0xesRhkUZ68uc8xHdnbClUFptcEvbQ26kjk/vNhaD/ACXdUFheklY3CuK0+5rhLb4sk8jnvWaTpU46J86hVLe+AulLleKu4tuN1pPWZXSmGJ7CxrnHJxzNJxnJ696tpF0GzyNzYycrebi3zoaxVowqrSa1KZ+jvpb7bvX+6L/opXw24XWHQ1xqbhb6muq6qeLseeoe32GZBIAaANyBufBTtFk3GdyNxTdKrVbi+UUQtKMJd0Y7hERRJkBERAEREBVfH+quVBHaaqgudXSNc6SN7IZXM5jsQTg/+yqnOo9Q4/r66fm5P3V+cYLLLetEVLKdpfPSuFSxo/tcoPMPf7JO3is3q3Lk451rG4tsm5xk1GaTW7022f2+prWy1UVdZ6OsheXxzQMe1x6kEA7+9dtU5wP1nBTwfNq6TxwsaS+kmkfgbnePfzI8x4K41WnqjpuFylLJWkK0HvpuvB+3+vIIi4a2qp6Kklq6uZkMETS6SR5wGgd69JWUlFavghPHC7z2vR7WUlS+nqampYxro5Cx4aMuJBG/cAfiqP8AnHqH7eun5uT917HE/Vfzq1B29OHsoadvZ0zXbEjO7yO4nbyAXgWG2z3i80lspml0lTKGDHcO8+QyfJWm9WcR6iy08jk36rJ9u0Y6N7/9fBpPhw+rk0NaJK58z6h9OHOdK4lzskkEk7nbCkC4qKnipKOGkgaGxQxtjY0dwAwAuVXUdotaTo0IU29XFJfJBERC+EREAIBGCMgrP3FvREun7i+6W6BxtM7s7HPYPPVp8Gk9D5LQK46ungq6aSmqYmTQytLXseMhwPUELxrUhM7hKWXt/RT2kt4vwf4ftMhqZaa4k6nsdM2lZPFW07AQxlU0uLfvAg/qplrHhA2WV1VpmoZFzEudSzuPKPcx2NvgfxVbXTSepbYXeuWSuY1pAL2xF7cn/M3IVvRo5JVxuYwdZygpR/lHVp/L7MnE/Gi6upw2Cy0cc22Xvlc5vvw3b+ag+pdV37UT/wCKV75IhjELPYjH3R1PvK8/5Luf2bW/l3/spBY+HurLs5vZ2qSliOPrar6sY23wdz17gvNWymrfZrK/oyc5+SW3x0S+pFFevBXRbrTSfL1zhcyvqG4hie3BhjPf8XfoPNd/QfDW16ekbXVr23C4N/ovc3Ecf+lvj7z+inirjH2s3fpfpGVnUV3efvXEedPN+fh4e/giIqzoIREQBFVnow8TaDiVwuttX682W+UEDKa7QufmVsrRy9o7O5Dw3mB95HUFWmgCIiAIiIAiIgCIiAIiID49zWDLnBo8ScIsh+n9xSgoBZ9B2WeCavin9fuBBDuwwxzY2EDo4h7nEHoA3xRAZI4c641Lw+1NDqHS1xdRVsbSx23MyVh6se07Ob7j3gEbgL9B/Rh441fF6CtjrtOwWqooow98kNUZGSHIGzS0Fv4lEQF2oiIAiIgCIiAIiIAsc+kJ6VOqrDc6/S2lbHR2yphnlgdcZpvWH4Y9zMsYWta0nGd+bGfNEQGNLhWVdxr56+vqZaqrqJDJNNK8ufI8nJcSdySUREB//9k=" alt="banksalad" style="width:32px;height:32px;border-radius:9px;object-fit:cover;display:block;">
+    <span class="nav-name">banksalad</span>
+    
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab on"  onclick="showPg('roadmap')">운영 로드맵</button>
+    <button class="nav-tab"     onclick="showPg('inflow')">유입</button>
+    <button class="nav-tab"     onclick="showPg('retention')">생애주기 리텐션</button>
+    <button class="nav-tab"     onclick="showPg('churn')">이탈 관리</button>
+    <button class="nav-tab"     onclick="showPg('revenue')">수익화 전환</button>
+  </div>
+  <span class="nav-badge">시뮬레이션 모드</span>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PAGE 1 · 운영 로드맵                               -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="pg-roadmap" class="pg on">
+  <div class="pg-head">
+    <div class="pg-tag">Operations Roadmap</div>
+    <div class="pg-title">운영 로드맵</div>
+    <div class="pg-sub">신사업 도입 시 각 생애주기 이벤트 기준으로 <strong>무엇을 수집하고, 무엇을 측정하고, 무엇을 검증해야 하는지</strong> 단계별로 설계합니다.</div>
+  </div>
+
+  <!-- 생애주기 레일 -->
+  <div class="card" style="margin-bottom:18px;padding:20px 24px">
+    <div class="card-title">신사업이 커버하는 생애주기 이벤트</div>
+    <div class="journey">
+      <div class="jstage"><div class="jico">💍</div><div class="jlbl">결혼 준비</div><div class="jsub">유입 트리거 ①</div></div>
+      <div class="jstage"><div class="jico">🏠</div><div class="jlbl">신혼기</div><div class="jsub">잔존 구간</div></div>
+      <div class="jstage"><div class="jico">🧬</div><div class="jlbl">임신 준비</div><div class="jsub">유입 트리거 ②</div></div>
+      <div class="jstage"><div class="jico">🤰</div><div class="jlbl">임신/출산</div><div class="jsub">집중 관리</div></div>
+      <div class="jstage"><div class="jico">👶</div><div class="jlbl">출산 후 육아</div><div class="jsub">이탈 위험</div></div>
+      <div class="jstage"><div class="jico">📈</div><div class="jlbl">장기 자산관리</div><div class="jsub">수익화</div></div>
+    </div>
+  </div>
+
+  <!-- 수집 데이터 매트릭스 -->
+  <div style="margin-bottom:6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)">생애 이벤트별 수집 데이터 설계</div>
+  <div style="font-size:12.5px;color:var(--sub);margin-bottom:14px">신사업 도입 직후부터 아래 데이터를 단계적으로 수집해야 의미 있는 지표 측정이 가능합니다.</div>
+
+  <!-- 탭 -->
+  <div class="itabs" id="rm-tabs">
+    <button class="itab on" onclick="rmTab(0)">💍 결혼 준비</button>
+    <button class="itab"    onclick="rmTab(1)">🧬 임신 준비</button>
+    <button class="itab"    onclick="rmTab(2)">🤰 임신/출산</button>
+    <button class="itab"    onclick="rmTab(3)">👶 출산 후 육아</button>
+  </div>
+
+  <!-- 결혼 준비 -->
+  <div class="rm-panel on" id="rmp-0">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+      <div class="rm-data-card" style="border-top:3px solid var(--blu)">
+        <div class="rm-dtype" style="color:var(--blu)">💰 재무 데이터</div>
+        <ul class="rm-list">
+          <li>결혼 예산 총 규모</li>
+          <li>현재 저축 잔액</li>
+          <li>월 소득 / 고정 지출</li>
+          <li>신혼집 계획 (전세·자가)</li>
+          <li>대출 보유 여부 및 한도</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--g)">
+        <div class="rm-dtype" style="color:var(--gd)">🎯 행동 데이터</div>
+        <ul class="rm-list">
+          <li>결혼비용 시뮬레이션 이용 여부</li>
+          <li>배우자 초대 완료 여부</li>
+          <li>예산 체크리스트 완료율</li>
+          <li>재무 목표 설정 여부</li>
+          <li>보험 점검 기능 진입 여부</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--amb)">
+        <div class="rm-dtype" style="color:var(--amb)">📅 이벤트 타임라인</div>
+        <ul class="rm-list">
+          <li>결혼 예정일</li>
+          <li>배우자 초대 시점</li>
+          <li>결혼식 완료 시점</li>
+          <li>신혼집 입주 예정일</li>
+          <li>임신 준비 시작 의사</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--red)">
+        <div class="rm-dtype" style="color:var(--red)">⚠️ 이탈 신호</div>
+        <ul class="rm-list">
+          <li>결혼식 완료 후 미접속 일수</li>
+          <li>리포트 열람 중단 시점</li>
+          <li>배우자 미연동 상태 지속</li>
+          <li>예산 시뮬 미완료 이탈</li>
+          <li>알림 수신 거부 전환</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rm-question-box">
+      <div class="rm-q-title">📌 이 데이터로 답해야 하는 핵심 질문</div>
+      <div class="rm-q-grid">
+        <div class="rm-q">결혼 준비를 위해 유입된 고객이 <strong>결혼식 이후에도 부부 자산관리 고객으로 남는가?</strong></div>
+        <div class="rm-q">배우자 초대를 완료한 커플과 개인 가입자 간 <strong>잔존율 차이는 얼마인가?</strong></div>
+        <div class="rm-q">결혼 예산 시뮬레이션을 이용한 고객이 그렇지 않은 고객 대비 <strong>LTV가 얼마나 높은가?</strong></div>
+        <div class="rm-q">결혼 완료 후 <strong>다음 이벤트(임신 준비)로 자연스럽게 전환되는 비율</strong>은 얼마인가?</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 임신 준비 -->
+  <div class="rm-panel" id="rmp-1">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+      <div class="rm-data-card" style="border-top:3px solid var(--blu)">
+        <div class="rm-dtype" style="color:var(--blu)">🧬 건강 데이터</div>
+        <ul class="rm-list">
+          <li>유전자/미생물 검사 동의 여부</li>
+          <li>검사 키트 구매 여부</li>
+          <li>검사 결과 열람 여부</li>
+          <li>부부 동시 검사 여부</li>
+          <li>건강 데이터 활용 동의</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--g)">
+        <div class="rm-dtype" style="color:var(--gd)">🛡️ 보험·보장 데이터</div>
+        <ul class="rm-list">
+          <li>현재 보험 보장 현황</li>
+          <li>보장공백 진단 진입 여부</li>
+          <li>산모·태아 보험 관심도</li>
+          <li>기존 보험 리모델링 의사</li>
+          <li>보험 상담 신청 여부</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--amb)">
+        <div class="rm-dtype" style="color:var(--amb)">📅 이벤트 타임라인</div>
+        <ul class="rm-list">
+          <li>임신 준비 시작 선언 시점</li>
+          <li>검사 완료 시점 (T+1)</li>
+          <li>리포트 첫 열람 시점 (T+2)</li>
+          <li>보장공백 진단 시점 (T+3)</li>
+          <li>임신 확인 등록 시점</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--red)">
+        <div class="rm-dtype" style="color:var(--red)">⚠️ 이탈 신호</div>
+        <ul class="rm-list">
+          <li>검사 완료 후 리포트 미열람</li>
+          <li>보장공백 진단 미진입</li>
+          <li>T+14일 이후 미접속</li>
+          <li>알림 거부 전환</li>
+          <li>임신 확인 후 미등록</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rm-question-box">
+      <div class="rm-q-title">📌 이 데이터로 답해야 하는 핵심 질문</div>
+      <div class="rm-q-grid">
+        <div class="rm-q">검사를 완료한 고객이 <strong>검사만 하고 끝나는가, 아니면 건강·자산·보험 관리로 이어지는가?</strong></div>
+        <div class="rm-q">건강 데이터 활용에 동의한 고객과 미동의 고객의 <strong>보험 전환율 차이</strong>는 얼마인가?</div>
+        <div class="rm-q">부부 동시 검사를 완료한 커플의 <strong>임신 등록 전환율</strong>은 단독 검사 대비 얼마나 높은가?</div>
+        <div class="rm-q">리포트 열람 → 보장공백 진단 → 보험 가입까지 <strong>평균 소요 기간과 이탈 지점</strong>은 어디인가?</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 임신/출산 -->
+  <div class="rm-panel" id="rmp-2">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+      <div class="rm-data-card" style="border-top:3px solid var(--blu)">
+        <div class="rm-dtype" style="color:var(--blu)">🤰 임신 관리 데이터</div>
+        <ul class="rm-list">
+          <li>임신 주수 / 출산 예정일</li>
+          <li>임신 초기 검사 이력</li>
+          <li>미생물 재검사 여부</li>
+          <li>월별 건강 리포트 열람 여부</li>
+          <li>태아보험 가입 여부</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--g)">
+        <div class="rm-dtype" style="color:var(--gd)">💰 출산 재무 데이터</div>
+        <ul class="rm-list">
+          <li>예상 출산비·산후조리비</li>
+          <li>정부지원금 수령 계획</li>
+          <li>육아휴직 계획 (부부 각각)</li>
+          <li>육아휴직 중 현금흐름 시뮬</li>
+          <li>비상자금 보유 규모</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--amb)">
+        <div class="rm-dtype" style="color:var(--amb)">📅 이벤트 타임라인</div>
+        <ul class="rm-list">
+          <li>임신 확인 등록일</li>
+          <li>임신 3개월 체크포인트</li>
+          <li>임신 6개월 체크포인트</li>
+          <li>임신 10개월 출산 직전</li>
+          <li>실제 출산일</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--red)">
+        <div class="rm-dtype" style="color:var(--red)">⚠️ 이탈 신호</div>
+        <ul class="rm-list">
+          <li>월별 리포트 미열람 2회 연속</li>
+          <li>출산비 시뮬 미이용</li>
+          <li>지원금 매칭 무관심</li>
+          <li>출산 후 D+30 미접속</li>
+          <li>알림 전체 거부</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rm-question-box">
+      <div class="rm-q-title">📌 이 데이터로 답해야 하는 핵심 질문</div>
+      <div class="rm-q-grid">
+        <div class="rm-q">임신 10개월 동안 월별 리포트를 지속 열람한 고객과 이탈한 고객의 <strong>출산비 절감액 차이</strong>는?</div>
+        <div class="rm-q">육아휴직 현금흐름 시뮬레이션을 이용한 고객의 <strong>출산 후 잔존율</strong>은 미이용 대비 얼마나 높은가?</div>
+        <div class="rm-q">임신 기간 중 보험·지원금 기능을 이용한 고객이 <strong>출산 후에도 자산관리 고객으로 남는 비율</strong>은?</div>
+        <div class="rm-q">출산 예정일 D-30 이내 개입 캠페인이 <strong>출산 후 3개월 재진입율에 미치는 영향</strong>은?</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 출산 후 육아 -->
+  <div class="rm-panel" id="rmp-3">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
+      <div class="rm-data-card" style="border-top:3px solid var(--blu)">
+        <div class="rm-dtype" style="color:var(--blu)">👶 육아 지출 데이터</div>
+        <ul class="rm-list">
+          <li>월간 육아비 실지출</li>
+          <li>정부지원금 수령 현황</li>
+          <li>자녀보험 가입 여부</li>
+          <li>산후조리 비용 실적</li>
+          <li>복직 예정 시점</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--g)">
+        <div class="rm-dtype" style="color:var(--gd)">📊 가족 자산 데이터</div>
+        <ul class="rm-list">
+          <li>부부 합산 월 소득 변화</li>
+          <li>가족 예산 설정 여부</li>
+          <li>자녀 교육비 적립 계획</li>
+          <li>내집 마련 플랜 진입 여부</li>
+          <li>월간 재무 리포트 열람 여부</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--amb)">
+        <div class="rm-dtype" style="color:var(--amb)">📅 이벤트 타임라인</div>
+        <ul class="rm-list">
+          <li>출산일 (D+0 기준점)</li>
+          <li>육아휴직 시작·종료일</li>
+          <li>복직 시점</li>
+          <li>생후 3개월 체크포인트</li>
+          <li>생후 12개월 체크포인트</li>
+        </ul>
+      </div>
+      <div class="rm-data-card" style="border-top:3px solid var(--red)">
+        <div class="rm-dtype" style="color:var(--red)">⚠️ 이탈 신호</div>
+        <ul class="rm-list">
+          <li>출산 후 D+30 미접속</li>
+          <li>지원금 신청 안내 무시</li>
+          <li>가족 예산 미설정</li>
+          <li>리포트 60일 이상 미열람</li>
+          <li>자녀보험 미관심</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rm-question-box">
+      <div class="rm-q-title">📌 이 데이터로 답해야 하는 핵심 질문</div>
+      <div class="rm-q-grid">
+        <div class="rm-q">출산 후 <strong>첫 지원금 신청 안내를 통해 재진입한 고객</strong>의 12개월 잔존율은 자연 복귀 고객 대비 얼마나 높은가?</div>
+        <div class="rm-q">육아 초기(0~3개월)에 가족 예산을 설정한 고객이 <strong>장기 자산관리 고객으로 전환되는 비율</strong>은?</div>
+        <div class="rm-q">출산 이벤트를 완료한 고객 중 <strong>내집 마련·교육비 플랜으로 이어진 비율</strong>과 소요 기간은?</div>
+        <div class="rm-q">출산 코호트의 <strong>최종 LTV가 결혼 코호트 대비 얼마나 높은지</strong>, 그 차이를 만드는 기능은 무엇인가?</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 로드맵 -->
+  <div style="margin:24px 0 6px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sub)">단계별 운영 로드맵</div>
+  <div style="font-size:12.5px;color:var(--sub);margin-bottom:14px">수집→측정→검증→최적화 순서로 접근합니다. 각 Phase는 앞 단계 데이터가 충분히 쌓인 이후에 진행합니다.</div>
+
+  <div class="phase-row">
+    <div class="phase">
+      <div class="phase-hd">
+        <div class="ph-ico" style="background:#DCFCE7">🗂️</div>
+        <div><div class="ph-name">Phase 1</div><div class="ph-period">0 – 6개월 · 데이터 수집 기반 구축</div></div>
+      </div>
+      <div class="phase-body">
+        <div class="rm-phase-q">우리가 지금 알아야 할 것</div>
+        <div class="task"><span class="tw tw1">수집</span><span>결혼·임신 등록 시점, 배우자 초대 완료 여부, 검사 구매·열람 여부 — <strong>생애 이벤트 발생 순간을 정확히 포착하는 것이 우선</strong></span></div>
+        <div class="task"><span class="tw tw1">측정</span><span>각 이벤트 기준 M1·M3 잔존율 베이스라인 측정. 이 단계에서는 목표치가 아니라 <strong>현재 우리 수치가 어느 수준인지 파악</strong>하는 것이 목적</span></div>
+        <div class="task"><span class="tw tw1">검증</span><span>결혼 직후 M6, 출산 직후 3개월이 실제로 이탈 집중 구간인지 데이터로 확인. <strong>가설을 사실로 확정</strong>하는 단계</span></div>
+        <div class="task"><span class="tw tw1">도구</span><span>이벤트 트래킹(CDP), 고객 그룹 분류 체계, M1/M3/M6 잔존율 자동 집계 대시보드</span></div>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-hd">
+        <div class="ph-ico" style="background:#D1FAE5">🔬</div>
+        <div><div class="ph-name">Phase 2</div><div class="ph-period">6 – 18개월 · 가설 검증 & 자동화</div></div>
+      </div>
+      <div class="phase-body">
+        <div class="rm-phase-q">Phase 1 데이터로 답할 수 있는 것들</div>
+        <div class="task"><span class="tw tw2">검증</span><span>배우자 초대 완료 고객의 LTV가 실제로 높은가 — <strong>커플 플랜의 수익 기여도 정량화</strong></span></div>
+        <div class="task"><span class="tw tw2">검증</span><span>건강 데이터 활용 동의 고객의 보험 전환율이 미동의 대비 유의미하게 높은가 — <strong>데이터 수집 ROI 측정</strong></span></div>
+        <div class="task"><span class="tw tw2">자동화</span><span>이탈 위험 고객 자동 탐지 → 이벤트 기준 맞춤 개입 캠페인 발송 체계 구축</span></div>
+        <div class="task"><span class="tw tw2">모델링</span><span>수집된 행동 데이터 기반으로 <strong>36개월 LTV 예측 곡선</strong> 피팅 및 생애주기 단계별 가중치 검증</span></div>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-hd">
+        <div class="ph-ico" style="background:#A7F3D0">🚀</div>
+        <div><div class="ph-name">Phase 3</div><div class="ph-period">18개월+ · 수익 구조 고도화</div></div>
+      </div>
+      <div class="phase-body">
+        <div class="rm-phase-q">충분한 데이터가 쌓인 이후에 가능한 것들</div>
+        <div class="task"><span class="tw tw3">예측</span><span>마르코프 전환행렬로 <strong>향후 6개월 고객 분포 예측</strong> → 인프라·CS 리소스 선제 배정</span></div>
+        <div class="task"><span class="tw tw3">최적화</span><span>몬테카를로 시뮬레이션으로 <strong>마케팅 예산 배분의 수익 달성 확률</strong> 계산 → CFO 보고 지표화</span></div>
+        <div class="task"><span class="tw tw3">확장</span><span>결혼·임신 데이터를 기반으로 <strong>내집 마련·부모 간병·교육비</strong> 등 다음 생애 이벤트로 서비스 확장</span></div>
+        <div class="task"><span class="tw tw3">IPO</span><span>생애주기 데이터 보유 고객의 LTV, D360 잔존율을 <strong>데이터 자산 가치</strong>로 환산 → IR 내러티브</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PAGE 2 · 유입 시뮬레이터                           -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="pg-inflow" class="pg">
+  <div class="pg-head">
+    <div class="pg-tag">Inflow Simulator</div>
+    <div class="pg-title">생애주기 유입 시뮬레이터</div>
+    <div class="pg-sub">결혼 / 임신 준비 / 임신·출산 이벤트별 월 신규 유입수를 직접 입력해 12개월 유저 규모 추이를 확인합니다.</div>
+  </div>
+
+  <div class="params-wrap">
+    <div class="params-head">⚙️ 유입 가정치 — 슬라이더 또는 직접 입력</div>
+    <div class="params-grid">
+      <div class="param-group">
+        <div class="param-group-title">📥 유입 규모</div>
+        <div class="param" id="p-wi"></div>
+        <div class="param" id="p-pi"></div>
+        <div class="param" id="p-prp"></div>
+      </div>
+      <div class="param-group">
+        <div class="param-group-title">📈 성장 & 이탈</div>
+        <div class="param" id="p-gr"></div>
+        <div class="param" id="p-nc"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-lbl">12개월 총 유입</div><div class="kpi-val" id="kv-i-tot">—</div></div>
+    <div class="kpi blu"><div class="kpi-lbl">결혼 유입 비중</div><div class="kpi-val" id="kv-i-ws">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">임신 유입 비중</div><div class="kpi-val" id="kv-i-ps">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">12개월 말 순 활성</div><div class="kpi-val" id="kv-i-act">—</div></div>
+    <div class="kpi red"><div class="kpi-lbl">누적 이탈</div><div class="kpi-val" id="kv-i-chd">—</div></div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">월별 신규 유입 (이벤트 유형별)</div>
+      <div class="cc cc-m"><canvas id="c-inflow"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">누적 활성 유저 vs 누적 이탈</div>
+      <div class="cc cc-m"><canvas id="c-active"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">유입 → 활성화 → 리텐션 퍼널 (12개월 말 기준)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center">
+      <div class="funnelw" id="fw-inflow"></div>
+      <div id="iv-verdict"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PAGE 3 · 생애주기 리텐션 분석                      -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="pg-retention" class="pg">
+  <div class="pg-head">
+    <div class="pg-tag">Lifecycle Retention Analysis</div>
+    <div class="pg-title">생애주기 리텐션 분석</div>
+    <div class="pg-sub">결혼·임신/출산 서비스는 D7/D30/D90 재방문이 아니라, <strong>생애 이벤트 구간별로 사용자가 서비스를 꾸준히 이용하는지</strong>가 핵심입니다. 핵심은 이벤트 이후에도 가족 자산관리 고객으로 남는가입니다.</div>
+  </div>
+
+  <!-- Cohort selector -->
+  <div class="cohort-selector">
+    <button class="cohort-btn on" data-cohort="wedding"  onclick="setCohort('wedding')"><span class="cb-icon">💍</span> 결혼 준비 그룹</button>
+    <button class="cohort-btn"   data-cohort="prep"     onclick="setCohort('prep')"><span class="cb-icon">🧬</span> 임신 준비 그룹</button>
+    <button class="cohort-btn"   data-cohort="pregnancy" onclick="setCohort('pregnancy')"><span class="cb-icon">🤰</span> 임신/출산 그룹</button>
+    <button class="cohort-btn"   data-cohort="combined" onclick="setCohort('combined')"><span class="cb-icon">📊</span> 전체 통합</button>
+  </div>
+
+  <!-- WEDDING COHORT -->
+  <div id="rc-wedding" class="ipanel on">
+    <div class="params-wrap">
+      <div class="params-head">💍 결혼 준비 그룹 잔존율 가정치 — 핵심 질문: 결혼식 이후에도 부부 자산관리 고객으로 남는가?</div>
+      <div class="params-grid">
+        <div class="param-group">
+          <div class="param-group-title">📅 구간별 유지율</div>
+          <div class="param" id="p-wm1"></div>
+          <div class="param" id="p-wm3"></div>
+          <div class="param" id="p-wm6"></div>
+          <div class="param" id="p-wm12"></div>
+        </div>
+        <div class="param-group">
+          <div class="param-group-title">🔗 전환 지표</div>
+          <div class="param" id="p-wcouple"></div>
+          <div class="param" id="p-wtopreg"></div>
+          <div class="param" id="p-wbase"></div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="card-title">결혼 준비 그룹 — 생애 타임라인</div>
+      <div class="stage-timeline" id="st-wedding"></div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi"><div class="kpi-lbl">배우자 초대 완료율</div><div class="kpi-val" id="kw-m1">—</div><div class="kpi-sub">초기 관심 유지</div></div>
+      <div class="kpi"><div class="kpi-lbl">M3 결혼 준비 지속율</div><div class="kpi-val" id="kw-m3">—</div><div class="kpi-sub">예산·주거 판단 유지</div></div>
+      <div class="kpi"><div class="kpi-lbl">M6 공동생활 전환율</div><div class="kpi-val" id="kw-m6">—</div><div class="kpi-sub">결혼 직후 이탈 여부</div></div>
+      <div class="kpi"><div class="kpi-lbl">M12 장기 자산관리율</div><div class="kpi-val" id="kw-m12">—</div><div class="kpi-sub">신혼부부 고객화</div></div>
+      <div class="kpi amb"><div class="kpi-lbl">임신 준비 진입율</div><div class="kpi-val" id="kw-topreg">—</div><div class="kpi-sub">다음 단계 전환</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">결혼 준비 그룹 잔존율 커브 (M0 → M12)</div>
+        <div class="cc cc-m"><canvas id="c-wret"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">이탈 집중 구간 분석</div>
+        <div class="cc cc-m"><canvas id="c-wdrop"></canvas></div>
+        <div id="wd-verdict" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREP COHORT -->
+  <div id="rc-prep" class="ipanel">
+    <div class="params-wrap">
+      <div class="params-head">🧬 임신 준비 그룹 잔존율 가정치 — 핵심 질문: 검사만 하고 끝나는가, 아니면 건강·자산·보험 관리 서비스로 이어지는가?</div>
+      <div class="params-grid">
+        <div class="param-group">
+          <div class="param-group-title">📅 구간별 유지율</div>
+          <div class="param" id="p-pt1"></div>
+          <div class="param" id="p-pt2"></div>
+          <div class="param" id="p-pt3"></div>
+        </div>
+        <div class="param-group">
+          <div class="param-group-title">🔗 전환 지표</div>
+          <div class="param" id="p-ptest"></div>
+          <div class="param" id="p-pins"></div>
+          <div class="param" id="p-pconv"></div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="card-title">임신 준비 그룹 — 생애 타임라인</div>
+      <div class="stage-timeline" id="st-prep"></div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi"><div class="kpi-lbl">T+1 검사 연결률</div><div class="kpi-val" id="kp-t1">—</div><div class="kpi-sub">검사 클릭/구매</div></div>
+      <div class="kpi"><div class="kpi-lbl">T+2 리포트 열람률</div><div class="kpi-val" id="kp-t2">—</div><div class="kpi-sub">가족 건강 리포트</div></div>
+      <div class="kpi"><div class="kpi-lbl">T+3 보장공백 진입률</div><div class="kpi-val" id="kp-t3">—</div><div class="kpi-sub">보험 점검 진입</div></div>
+      <div class="kpi"><div class="kpi-lbl">보험 연결 전환율</div><div class="kpi-val" id="kp-ins">—</div><div class="kpi-sub">실제 보험 가입</div></div>
+      <div class="kpi amb"><div class="kpi-lbl">임신·출산 전환율</div><div class="kpi-val" id="kp-conv">—</div><div class="kpi-sub">임신/출산 서비스 이동</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">임신 준비 단계별 리텐션 퍼널</div>
+        <div class="funnelw" id="fw-prep" style="padding:16px 0"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">T+0 → 임신 전환까지 리텐션 커브</div>
+        <div class="cc cc-m"><canvas id="c-pret"></canvas></div>
+        <div id="pp-verdict" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREGNANCY COHORT -->
+  <div id="rc-pregnancy" class="ipanel">
+    <div class="params-wrap">
+      <div class="params-head">🤰 임신/출산 그룹 잔존율 가정치 — 핵심 질문: 출산 이후에도 가족 금융관리 고객으로 남는가?</div>
+      <div class="params-grid">
+        <div class="param-group">
+          <div class="param-group-title">🤰 임신 구간 (10개월)</div>
+          <div class="param" id="p-gm3"></div>
+          <div class="param" id="p-gm6"></div>
+          <div class="param" id="p-gm10"></div>
+        </div>
+        <div class="param-group">
+          <div class="param-group-title">👶 출산 후 구간</div>
+          <div class="param" id="p-gpb3"></div>
+          <div class="param" id="p-gpb12"></div>
+          <div class="param" id="p-garpu"></div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <div class="card-title">임신/출산 그룹 — 생애 타임라인</div>
+      <div class="stage-timeline" id="st-pregnancy"></div>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi"><div class="kpi-lbl">임신 3개월 유지율</div><div class="kpi-val" id="kg-m3">—</div><div class="kpi-sub">초기 건강·보험 관리</div></div>
+      <div class="kpi"><div class="kpi-lbl">임신 6개월 유지율</div><div class="kpi-val" id="kg-m6">—</div><div class="kpi-sub">출산비·지원금 관리</div></div>
+      <div class="kpi"><div class="kpi-lbl">임신 10개월 유지율</div><div class="kpi-val" id="kg-m10">—</div><div class="kpi-sub">출산 직전까지 유지</div></div>
+      <div class="kpi red"><div class="kpi-lbl">출산 후 3개월 재진입</div><div class="kpi-val" id="kg-pb3">—</div><div class="kpi-sub">최대 이탈 위험 구간</div></div>
+      <div class="kpi amb"><div class="kpi-lbl">출산 후 12개월 관리율</div><div class="kpi-val" id="kg-pb12">—</div><div class="kpi-sub">가족 자산관리 전환</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">임신/출산 그룹 잔존율 커브</div>
+        <div class="cc cc-m"><canvas id="c-gret"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">월별 이탈율 + 개입 효과</div>
+        <div class="cc cc-m"><canvas id="c-gdrop"></canvas></div>
+        <div id="gd-verdict" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMBINED -->
+  <div id="rc-combined" class="ipanel">
+    <div class="card">
+      <div class="card-title">전체 그룹 통합 잔존율 비교</div>
+      <div class="cc cc-l"><canvas id="c-combined"></canvas></div>
+    </div>
+    <div class="g2" style="margin-top:16px">
+      <div class="card">
+        <div class="card-title">그룹별 36개월 누적 LTV 비교</div>
+        <div class="cc cc-m"><canvas id="c-ltvcomp"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">생애이벤트 단계별 월간 방문 빈도</div>
+        <div class="cc cc-s"><canvas id="c-visit"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PAGE 4 · 이탈 관리                                 -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="pg-churn" class="pg">
+  <div class="pg-head">
+    <div class="pg-tag">Churn Management</div>
+    <div class="pg-title">이탈 관리 & 개입 설계</div>
+    <div class="pg-sub">결혼 직후 M6, 출산 직후 3개월이 최대 이탈 위험 구간입니다. 생애주기 단계별 이탈 위험도와 구체적인 대응 방안을 확인합니다.</div>
+  </div>
+
+  <div class="params-wrap">
+    <div class="params-head">⚙️ 이탈 가정치</div>
+    <div class="params-grid">
+      <div class="param-group">
+        <div class="param-group-title">👥 전체 규모</div>
+        <div class="param" id="p-cmau"></div>
+        <div class="param" id="p-ceff"></div>
+      </div>
+      <div class="param-group">
+        <div class="param-group-title">💍 결혼 준비 그룹 이탈</div>
+        <div class="param" id="p-cw6"></div>
+        <div class="param" id="p-cw12"></div>
+      </div>
+      <div class="param-group">
+        <div class="param-group-title">🤰 임신/출산 이탈</div>
+        <div class="param" id="p-cpb"></div>
+        <div class="param" id="p-cpb12"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risk matrix -->
+  <div class="risk-matrix">
+    <div class="risk-card high">
+      <div class="risk-title">🔴 결혼 직후 M6 이탈</div>
+      <div class="risk-n" id="cr-w6">—</div>
+      <div class="risk-sub">결혼 목적 달성 후 자연 이탈</div>
+      <span class="action-badge" style="background:var(--redl);color:var(--red)">월간 재무 리포트 전환 필수</span>
+    </div>
+    <div class="risk-card mid">
+      <div class="risk-title">🟡 임신 준비 T+1 이탈</div>
+      <div class="risk-n" id="cr-pt">—</div>
+      <div class="risk-sub">검사만 하고 관리 서비스 미이용</div>
+      <span class="action-badge" style="background:var(--ambl);color:#92400E">검사 후 리포트 자동 발송</span>
+    </div>
+    <div class="risk-card high">
+      <div class="risk-title">🔴 출산 직후 3개월 이탈</div>
+      <div class="risk-n" id="cr-pb3">—</div>
+      <div class="risk-sub">육아 집중으로 앱 이탈 급증</div>
+      <span class="action-badge" style="background:var(--redl);color:var(--red)">출산 D+7 지원금 알림 필수</span>
+    </div>
+    <div class="risk-card safe">
+      <div class="risk-title">🟢 캠페인 구제 가능</div>
+      <div class="risk-n" id="cr-save">—</div>
+      <div class="risk-sub">개입 시 리텐션 회복 가능</div>
+      <span class="action-badge" style="background:var(--blul);color:#1D4ED8">이탈 예측 ML 자동 발송</span>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">생애주기 단계별 이탈 위험도 비교</div>
+      <div class="cc cc-m"><canvas id="c-churnstage"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">임신 10개월 + 출산 후 이탈 위험 곡선</div>
+      <div class="cc cc-m"><canvas id="c-pregchurn"></canvas></div>
+      <div style="margin-top:8px;font-size:12px;color:var(--sub)">💡 출산 직후가 가장 위험 — 출산 D+7 이내에 지원금 신청 안내 + 육아비 예산 플랜 발송 필수</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">생애주기 단계별 이탈 개입 플레이북</div>
+    <table class="interv-table">
+      <thead><tr><th>단계</th><th>이탈 원인</th><th>위험 신호</th><th>개입 타이밍</th><th>대응 액션</th><th>기대 회복율</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-b">결혼 직후</span><br>M6 전후</td>
+          <td>결혼식 완료<br>목적 달성 인식</td>
+          <td>앱 접속 3주↓<br>리포트 미열람</td>
+          <td>결혼 기념일 D+7</td>
+          <td>신혼부부 자산관리 리포트 발송 + 공동 예산 플랜 CTA</td>
+          <td style="font-family:'DM Mono';color:var(--gd);font-weight:700">28~35%</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-a">임신 준비</span><br>T+1 이후</td>
+          <td>검사 완료<br>결과 확인 후 미행동</td>
+          <td>검사 완료 후 D+14 미열람</td>
+          <td>검사 결과 발송 후 D+3</td>
+          <td>건강 리스크 요약 리포트 + 보장공백 진단 CTA 1-Click</td>
+          <td style="font-family:'DM Mono';color:var(--gd);font-weight:700">35~45%</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-r">임신 10개월</span><br>출산 직전</td>
+          <td>출산 예정일 임박<br>앱 관심 분산</td>
+          <td>D90 리텐션 급락<br>시뮬레이션 미사용</td>
+          <td>출산 예정일 D-30</td>
+          <td>출산비·지원금·육아휴직 현금흐름 시뮬 발송</td>
+          <td style="font-family:'DM Mono';color:var(--gd);font-weight:700">42~52%</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-r">출산 직후</span><br>0~3개월</td>
+          <td>육아 집중<br>금융 관심 최저</td>
+          <td>로그인 빈도 80%↓<br>리포트 완전 미열람</td>
+          <td>출산 D+7</td>
+          <td>첫만남이용권·부모급여 신청 안내 + 월간 가족 지출 자동 트래킹 온보딩</td>
+          <td style="font-family:'DM Mono';color:var(--gd);font-weight:700">38~48%</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-b">출산 후</span><br>3~12개월</td>
+          <td>육아비 지출 부담<br>장기 금융 관심 저조</td>
+          <td>자산관리 기능 미사용 60일↑</td>
+          <td>생후 3개월 시점</td>
+          <td>자녀보험·가족 예산 관리 기능 소개 + 머니코치 1회 무료 상담 CTA</td>
+          <td style="font-family:'DM Mono';color:var(--gd);font-weight:700">25~33%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="g2" style="margin-top:16px">
+    <div class="card">
+      <div class="card-title">이탈 예측 주요 변수 중요도</div>
+      <div class="cc cc-s"><canvas id="c-feat"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">캠페인 개입 ROI 시뮬레이션</div>
+      <div class="cc cc-s"><canvas id="c-roicmp"></canvas></div>
+      <div style="margin-top:10px;font-size:12px;color:var(--sub)">
+        캠페인 비용 = 개입 대상 1인당 ₩3,000 가정 / 회복 유저 LTV = ₩85,000 가정
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- PAGE 5 · 수익화 전환                               -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="pg-revenue" class="pg">
+  <div class="pg-head">
+    <div class="pg-tag">Revenue Conversion Simulator</div>
+    <div class="pg-title">수익화 전환 시뮬레이션</div>
+    <div class="pg-sub">가정치를 카테고리별로 입력해 검사 키트 전환 + 보험 연결 수익 구조와 시나리오를 확인합니다.</div>
+  </div>
+
+  <!-- Category inputs -->
+  <div class="rev-cats">
+    <div class="rev-cat open" id="rc-traffic">
+      <div class="rev-cat-head" onclick="toggleRevCat('traffic')">
+        <div class="rev-cat-icon" style="background:#DBEAFE">📊</div>
+        <div class="rev-cat-name">트래픽 기반</div>
+        <span class="rev-cat-chev">▼</span>
+      </div>
+      <div class="rev-cat-body">
+        <div class="param" id="p-rv"></div>
+        <div class="param" id="p-rereg"></div>
+      </div>
+    </div>
+    <div class="rev-cat open" id="rc-testkit">
+      <div class="rev-cat-head" onclick="toggleRevCat('testkit')">
+        <div class="rev-cat-icon" style="background:#DCFCE7">🧪</div>
+        <div class="rev-cat-name">검사 키트 전환</div>
+        <span class="rev-cat-chev">▼</span>
+      </div>
+      <div class="rev-cat-body">
+        <div class="param" id="p-rctr"></div>
+        <div class="param" id="p-rcvr"></div>
+        <div class="param" id="p-rcp"></div>
+        <div class="param" id="p-rsp"></div>
+        <div class="param" id="p-rpp"></div>
+      </div>
+    </div>
+    <div class="rev-cat open" id="rc-insurance">
+      <div class="rev-cat-head" onclick="toggleRevCat('insurance')">
+        <div class="rev-cat-icon" style="background:#FEE2E2">🛡️</div>
+        <div class="rev-cat-name">보험 연결 수익</div>
+        <span class="rev-cat-chev">▼</span>
+      </div>
+      <div class="rev-cat-body">
+        <div class="param" id="p-ric"></div>
+        <div class="param" id="p-ricvr"></div>
+        <div class="param" id="p-ria"></div>
+      </div>
+    </div>
+    <div class="rev-cat open" id="rc-platform">
+      <div class="rev-cat-head" onclick="toggleRevCat('platform')">
+        <div class="rev-cat-icon" style="background:#F5F3FF">📱</div>
+        <div class="rev-cat-name">플랫폼 전체</div>
+        <span class="rev-cat-chev">▼</span>
+      </div>
+      <div class="rev-cat-body">
+        <div class="param" id="p-rmau"></div>
+        <div class="param" id="p-rret"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-lbl">월 검사 수익</div><div class="kpi-val" id="kr-test">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">월 보험 수수료</div><div class="kpi-val" id="kr-ins">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">월 합산 수익</div><div class="kpi-val" id="kr-tot">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">리텐션 유저 ARPU</div><div class="kpi-val" id="kr-arpu">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">수익성 판정</div><div id="kr-verdict" style="margin-top:6px">—</div></div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">BM별 월 수익 구성</div>
+      <div class="cc cc-m"><canvas id="c-revdonut"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">보수적 / 기본 / 낙관적 시나리오 비교</div>
+      <div class="cc cc-m"><canvas id="c-scenario"></canvas></div>
+    </div>
+  </div>
+
+  <div class="g2" style="margin-top:16px">
+    <div class="card">
+      <div class="card-title">리텐션율별 월 수익 민감도</div>
+      <div class="cc cc-s"><canvas id="c-sensitivity"></canvas></div>
+      <div style="margin-top:8px;font-size:12px;color:var(--sub)">💡 D30 리텐션 20%p 개선 = 수익 복리 효과 — 리텐션이 모든 수익 지표의 선행 레버입니다.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">검사 키트 전환 퍼널 (월 기준)</div>
+      <div class="funnelw" id="fw-rev" style="padding:14px 0"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
+const fmtW = n => {
+  if(n>=100000000) return (n/100000000).toFixed(1)+'억원';
+  if(n>=10000)     return Math.round(n/10000)+'만원';
+  return Math.round(n).toLocaleString()+'원';
+};
+const lerp = (a,b,t) => Math.round(a+(b-a)*t);
+
+// Chart defaults
+Chart.defaults.font.family = "'Noto Sans KR', sans-serif";
+Chart.defaults.font.size   = 11;
+Chart.defaults.color       = '#9CA3AF';
+
+const G='#00C471',GD='#009E5A',GL='rgba(0,196,113,.15)';
+const RED='#EF4444',RL='rgba(239,68,68,.12)';
+const AMB='#F59E0B',AL='rgba(245,158,11,.12)';
+const BLU='#3B82F6',BLL='rgba(59,130,246,.12)';
+const PUR='#8B5CF6',GRAY='#9CA3AF';
+
+function mkChart(id,type,data,opts={}){
+  const ctx=$(id).getContext('2d');
+  return new Chart(ctx,{type,data,options:{
+    responsive:true,maintainAspectRatio:false,
+    animation:{duration:300},
+    plugins:{legend:{labels:{boxWidth:10,font:{size:11}}}},
+    scales: type!=='doughnut'&&type!=='pie' ? {
+      x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11}}},
+      y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{font:{size:11}}}
+    } : {},
+    ...opts
+  }});
+}
+
+// ── Dual input builder ────────────────────────────────
+// cfg: {id, label, min, max, step, val, unit, fmt}
+const _params = {};
+function buildParam(containerId, cfg){
+  const el=$(containerId);
+  if(!el) return;
+  const fmtFn = cfg.fmt || (v=>v);
+  el.innerHTML=`
+    <div class="param-top">
+      <span class="param-lbl">${cfg.label}</span>
+      <div class="param-right">
+        <input type="number" class="num-in" id="n-${cfg.id}" 
+          min="${cfg.min}" max="${cfg.max}" step="${cfg.step||1}" value="${cfg.val}">
+        <span class="param-unit">${cfg.unit||''}</span>
+      </div>
+    </div>
+    <input type="range" id="r-${cfg.id}"
+      min="${cfg.min}" max="${cfg.max}" step="${cfg.step||1}" value="${cfg.val}">
+  `;
+  _params[cfg.id] = cfg.val;
+  const r = $('r-'+cfg.id), n = $('n-'+cfg.id);
+  const sync = (src,tgt,v) => {
+    const clamped = Math.max(cfg.min, Math.min(cfg.max, +v||cfg.val));
+    _params[cfg.id] = clamped;
+    tgt.value = clamped;
+    const pct = ((clamped-cfg.min)/(cfg.max-cfg.min))*100;
+    r.style.setProperty('--p', pct+'%');
+    if(cfg.onChange) cfg.onChange();
+  };
+  r.addEventListener('input', ()=>sync(r,n,r.value));
+  n.addEventListener('input', ()=>sync(n,r,n.value));
+  const pct = ((cfg.val-cfg.min)/(cfg.max-cfg.min))*100;
+  r.style.setProperty('--p', pct+'%');
+}
+const P = id => _params[id]||0;
+
+// ── Page nav ──────────────────────────────────────────
+const PGS = ['roadmap','inflow','retention','churn','revenue'];
+const initFlags = {};
+
+function showPg(id){
+  PGS.forEach(p=>{
+    $('pg-'+p).classList.toggle('on',p===id);
+  });
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>{
+    t.classList.toggle('on',PGS[i]===id);
+  });
+  if(!initFlags[id]){ initFlags[id]=true; initPage(id); }
+}
+
+function initPage(id){
+  if(id==='inflow')    initInflow();
+  if(id==='retention') initRetention();
+  if(id==='churn')     initChurn();
+  if(id==='revenue')   initRevenue();
+}
+
+// ── Cohort nav ────────────────────────────────────────
+function setCohort(c){
+  document.querySelectorAll('.cohort-btn').forEach(b=>b.classList.toggle('on',b.dataset.cohort===c));
+  ['wedding','prep','pregnancy','combined'].forEach(x=>{
+    $('rc-'+x).classList.toggle('on',x===c);
+  });
+  if(c==='combined') updateCombined();
+}
+
+// ── Revenue cat toggle ────────────────────────────────
+function toggleRevCat(id){
+  const el=$('rc-'+id);
+  el.classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════════════
+// PAGE 2 · INFLOW
+// ══════════════════════════════════════════════════════
+const IC = {}; // inflow charts
+
+function initInflow(){
+  buildParam('p-wi',  {id:'wi',  label:'월 결혼 준비 유입',min:200,max:20000,step:100,val:3000,unit:'명',onChange:updateInflow});
+  buildParam('p-pi',  {id:'pi',  label:'월 임신/출산 유입',min:200,max:30000,step:100,val:5000,unit:'명',onChange:updateInflow});
+  buildParam('p-prp', {id:'prp', label:'월 임신 준비 유입',min:200,max:15000,step:100,val:2000,unit:'명',onChange:updateInflow});
+  buildParam('p-gr',  {id:'gr',  label:'월 성장률',min:0,max:30,step:0.5,val:8,unit:'%',onChange:updateInflow});
+  buildParam('p-nc',  {id:'nc',  label:'월 자연 이탈율',min:0.5,max:12,step:0.1,val:3.5,unit:'%',onChange:updateInflow});
+
+  const MONTHS=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  IC.inflow = mkChart('c-inflow','bar',{labels:MONTHS,datasets:[
+    {label:'결혼 준비',data:Array(12).fill(0),backgroundColor:'rgba(59,130,246,.72)',borderRadius:3,borderWidth:0},
+    {label:'임신 준비',data:Array(12).fill(0),backgroundColor:'rgba(139,92,246,.72)',borderRadius:3,borderWidth:0},
+    {label:'임신/출산',data:Array(12).fill(0),backgroundColor:G,borderRadius:3,borderWidth:0},
+  ]},{plugins:{legend:{labels:{boxWidth:9}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true}}});
+
+  IC.active = mkChart('c-active','line',{labels:MONTHS,datasets:[
+    {label:'누적 활성 유저',data:Array(12).fill(0),borderColor:G,backgroundColor:GL,fill:true,tension:.4,borderWidth:2,pointRadius:3},
+    {label:'누적 이탈자',  data:Array(12).fill(0),borderColor:RED,backgroundColor:RL,fill:true,tension:.4,borderWidth:1.5,borderDash:[5,3],pointRadius:2},
+  ]});
+
+  updateInflow();
+}
+
+function updateInflow(){
+  if(!IC.inflow) return;
+  const wi=P('wi'),pi=P('pi'),prp=P('prp'),gr=P('gr')/100,nc=P('nc')/100;
+  let totActive=0,totChurned=0;
+  const wA=[],pA=[],prpA=[],actA=[],chA=[];
+  for(let m=0;m<12;m++){
+    const wm=Math.round(wi*Math.pow(1+gr,m));
+    const pm=Math.round(pi*Math.pow(1+gr,m));
+    const prpm=Math.round(prp*Math.pow(1+gr,m));
+    wA.push(wm); pA.push(pm); prpA.push(prpm);
+    totActive+=wm+pm+prpm;
+    const c=Math.round(totActive*nc);
+    totChurned+=c; totActive-=c;
+    actA.push(totActive); chA.push(totChurned);
+  }
+  const totIn=wA.reduce((a,b)=>a+b,0)+pA.reduce((a,b)=>a+b,0)+prpA.reduce((a,b)=>a+b,0);
+  $('kv-i-tot').textContent=fmt(totIn)+'명';
+  $('kv-i-ws').textContent=Math.round(wA.reduce((a,b)=>a+b,0)/totIn*100)+'%';
+  $('kv-i-ps').textContent=Math.round((pA.reduce((a,b)=>a+b,0)+prpA.reduce((a,b)=>a+b,0))/totIn*100)+'%';
+  $('kv-i-act').textContent=fmt(totActive)+'명';
+  $('kv-i-chd').textContent=fmt(totChurned)+'명';
+  IC.inflow.data.datasets[0].data=wA;
+  IC.inflow.data.datasets[1].data=prpA;
+  IC.inflow.data.datasets[2].data=pA;
+  IC.inflow.update();
+  IC.active.data.datasets[0].data=actA;
+  IC.active.data.datasets[1].data=chA;
+  IC.active.update();
+
+  // funnel
+  const fdata=[
+    {l:'총 유입',n:totIn,p:'100%',w:'100%',c:'#3B82F6'},
+    {l:'앱 활성화 완료',n:Math.round(totIn*.71),p:'71%',w:'82%',c:'#10B981'},
+    {l:'D30 리텐션 유지',n:totActive,p:Math.round(totActive/totIn*100)+'%',w:Math.max(18,Math.round(totActive/totIn*100))+'%',c:G},
+    {l:'금융 상품 전환',n:Math.round(totActive*.14),p:'14%',w:'30%',c:GD},
+  ];
+  $('fw-inflow').innerHTML=fdata.map((f,i)=>`
+    <div class="fbar" style="width:${f.w};background:${f.c}">
+      <span>${f.l}</span><span>${fmt(f.n)}명 (${f.p})</span>
+    </div>
+    ${i<fdata.length-1?'<div class="fdown">↓</div>':''}
+  `).join('');
+
+  const cr=P('nc');
+  $('iv-verdict').innerHTML=cr<=2
+    ?`<div class="vstrip vs-grn">✅ 이탈율 양호 (${cr}%) — 성장에 집중 투자 시점</div>`
+    :cr<=5
+    ?`<div class="vstrip vs-amb">⚠️ 이탈율 주의 (${cr}%) — 리텐션 캠페인 병행 필요</div>`
+    :`<div class="vstrip vs-red">🚨 이탈율 경고 (${cr}%) — 성장 전 리텐션 먼저 처방</div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// PAGE 3 · RETENTION (lifecycle)
+// ══════════════════════════════════════════════════════
+const RC={};
+
+function initRetention(){
+  // Wedding params
+  buildParam('p-wm1',  {id:'wm1', label:'배우자 초대 완료율',min:10,max:95,step:1,val:72,unit:'%',onChange:()=>{updateWedding();updateCombined();}});
+  buildParam('p-wm3',  {id:'wm3', label:'M3 준비 지속율',min:10,max:85,step:1,val:58,unit:'%',onChange:()=>{updateWedding();updateCombined();}});
+  buildParam('p-wm6',  {id:'wm6', label:'M6 공동생활 전환율',min:5,max:75,step:1,val:44,unit:'%',onChange:()=>{updateWedding();updateCombined();}});
+  buildParam('p-wm12', {id:'wm12',label:'M12 장기 자산관리율',min:5,max:65,step:1,val:30,unit:'%',onChange:()=>{updateWedding();updateCombined();}});
+  buildParam('p-wcouple',{id:'wcouple',label:'배우자 동반 연결율',min:10,max:80,step:1,val:45,unit:'%',onChange:updateWedding});
+  buildParam('p-wtopreg',{id:'wtopreg',label:'임신 준비 서비스 진입율',min:5,max:70,step:1,val:28,unit:'%',onChange:updateWedding});
+  buildParam('p-wbase', {id:'wbase',label:'기존 앱 M3 리텐션 (비교)',min:5,max:50,step:1,val:18,unit:'%',onChange:updateWedding});
+
+  // Prep params
+  buildParam('p-pt1',  {id:'pt1', label:'T+1 검사 연결률',min:5,max:85,step:1,val:62,unit:'%',onChange:()=>{updatePrep();updateCombined();}});
+  buildParam('p-pt2',  {id:'pt2', label:'T+2 리포트 열람률',min:5,max:80,step:1,val:48,unit:'%',onChange:()=>{updatePrep();updateCombined();}});
+  buildParam('p-pt3',  {id:'pt3', label:'T+3 보장공백 진입률',min:5,max:70,step:1,val:36,unit:'%',onChange:()=>{updatePrep();updateCombined();}});
+  buildParam('p-ptest',{id:'ptest',label:'검사 구매 전환율',min:5,max:50,step:1,val:22,unit:'%',onChange:updatePrep});
+  buildParam('p-pins', {id:'pins', label:'보험 가입 전환율',min:2,max:30,step:0.5,val:10,unit:'%',onChange:updatePrep});
+  buildParam('p-pconv',{id:'pconv',label:'임신·출산 전환율',min:5,max:70,step:1,val:42,unit:'%',onChange:()=>{updatePrep();updateCombined();}});
+
+  // Pregnancy params
+  buildParam('p-gm3',  {id:'gm3', label:'임신 3개월 유지율',min:10,max:95,step:1,val:80,unit:'%',onChange:()=>{updatePregnancy();updateCombined();}});
+  buildParam('p-gm6',  {id:'gm6', label:'임신 6개월 유지율',min:10,max:90,step:1,val:66,unit:'%',onChange:()=>{updatePregnancy();updateCombined();}});
+  buildParam('p-gm10', {id:'gm10',label:'임신 10개월 유지율',min:5,max:85,step:1,val:54,unit:'%',onChange:()=>{updatePregnancy();updateCombined();}});
+  buildParam('p-gpb3', {id:'gpb3',label:'출산 후 3개월 재진입율',min:5,max:70,step:1,val:42,unit:'%',onChange:()=>{updatePregnancy();updateCombined();}});
+  buildParam('p-gpb12',{id:'gpb12',label:'출산 후 12개월 장기관리율',min:5,max:60,step:1,val:32,unit:'%',onChange:()=>{updatePregnancy();updateCombined();}});
+  buildParam('p-garpu',{id:'garpu',label:'임신기 월 ARPU',min:500,max:15000,step:100,val:4200,unit:'원',onChange:updatePregnancy});
+
+  // WEDDING charts
+  RC.wret = mkChart('c-wret','line',{
+    labels:['M0','M1','M3','M6','M12'],
+    datasets:[
+      {label:'기존 앱 (비교)',data:[],borderColor:GRAY,borderDash:[5,3],borderWidth:1.5,fill:false,tension:.4,pointRadius:4},
+      {label:'결혼 준비 그룹',  data:[],borderColor:BLU,backgroundColor:BLL,fill:true,tension:.4,borderWidth:2,pointRadius:5},
+    ]
+  },{scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}});
+
+  RC.wdrop = mkChart('c-wdrop','bar',{
+    labels:['M0→M1','M1→M3','M3→M6','M6→M12'],
+    datasets:[{label:'구간 이탈율',data:[],backgroundColor:[GL,AL,RL,RL],borderWidth:0,borderRadius:4}]
+  },{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+'%'}}}});
+
+  // PREP charts
+  RC.pret = mkChart('c-pret','line',{
+    labels:['T+0','T+1','T+2','T+3','임신 전환'],
+    datasets:[
+      {label:'임신 준비 그룹',data:[],borderColor:PUR,backgroundColor:'rgba(139,92,246,.12)',fill:true,tension:.4,borderWidth:2,pointRadius:5},
+    ]
+  },{plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}});
+
+  // PREGNANCY charts
+  RC.gret = mkChart('c-gret','line',{
+    labels:['임신 1개월','3개월','6개월','10개월','출산 직후','출산 후 3개월','출산 후 12개월'],
+    datasets:[
+      {label:'임신/출산 그룹',data:[],borderColor:G,backgroundColor:GL,fill:true,tension:.4,borderWidth:2,pointRadius:5},
+    ]
+  },{plugins:{legend:{display:false}},scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}});
+
+  RC.gdrop = mkChart('c-gdrop','bar',{
+    labels:['임신\n1→3개월','임신\n3→6개월','임신\n6→10개월','출산\n직후','출산 후\n3→12개월'],
+    datasets:[
+      {label:'이탈율',data:[],backgroundColor:[GL,AL,AL,RL,AL],borderWidth:0,borderRadius:3},
+      {label:'개입 후',data:[],backgroundColor:['rgba(0,196,113,.35)','rgba(245,158,11,.3)','rgba(245,158,11,.3)','rgba(239,68,68,.35)','rgba(245,158,11,.3)'],borderWidth:0,borderRadius:3},
+    ]
+  },{scales:{y:{ticks:{callback:v=>v+'%'}}}});
+
+  // COMBINED charts (lazy init)
+  updateWedding();
+  updatePrep();
+  updatePregnancy();
+}
+
+function updateWedding(){
+  const m1=P('wm1'),m3=P('wm3'),m6=P('wm6'),m12=P('wm12');
+  const base=P('wbase'),tp=P('wtopreg');
+  $('kw-m1').textContent=m1+'%';
+  $('kw-m3').textContent=m3+'%';
+  $('kw-m6').textContent=m6+'%';
+  $('kw-m12').textContent=m12+'%';
+  $('kw-topreg').textContent=tp+'%';
+
+  // Stage timeline
+  const stages=[
+    {ico:'💍',lbl:'결혼 준비 진입',r:100,key:'M0'},
+    {ico:'🤝',lbl:'배우자 초대',r:m1,key:'M1'},
+    {ico:'🏠',lbl:'결혼 준비 지속',r:m3,key:'M3'},
+    {ico:'💑',lbl:'공동생활 전환',r:m6,key:'M6'},
+    {ico:'📈',lbl:'장기 자산관리',r:m12,key:'M12'},
+  ];
+  $('st-wedding').innerHTML = buildTimeline(stages);
+
+  if(!RC.wret) return;
+  RC.wret.data.datasets[0].data=[100,lerp(100,base,0.3),base,Math.round(base*.6),Math.round(base*.35)];
+  RC.wret.data.datasets[1].data=[100,m1,m3,m6,m12];
+  RC.wret.update();
+
+  const drops=[100-m1, m1-m3, m3-m6, m6-m12].map(v=>Math.max(0,v));
+  RC.wdrop.data.datasets[0].data=drops;
+  RC.wdrop.update();
+
+  const maxDrop=Math.max(...drops);
+  const worstIdx=drops.indexOf(maxDrop);
+  const labels=['M0→M1','M1→M3','M3→M6','M6→M12'];
+  $('wd-verdict').innerHTML=maxDrop>30
+    ?`<div class="vstrip vs-red">🚨 최대 이탈 구간: <strong>${labels[worstIdx]}</strong> — ${maxDrop}%p 이탈. 이 구간 집중 캠페인 필요</div>`
+    :maxDrop>15
+    ?`<div class="vstrip vs-amb">⚠️ 주의 구간: <strong>${labels[worstIdx]}</strong> — ${maxDrop}%p 이탈. UX 개선 병행 필요</div>`
+    :`<div class="vstrip vs-grn">✅ 전 구간 이탈율 양호 — 다음 단계 지표 집중 투자 시점</div>`;
+}
+
+function updatePrep(){
+  const t1=P('pt1'),t2=P('pt2'),t3=P('pt3'),pins=P('pins'),pconv=P('pconv'),ptest=P('ptest');
+  $('kp-t1').textContent=t1+'%';
+  $('kp-t2').textContent=t2+'%';
+  $('kp-t3').textContent=t3+'%';
+  $('kp-ins').textContent=pins+'%';
+  $('kp-conv').textContent=pconv+'%';
+
+  const stages=[
+    {ico:'🧬',lbl:'임신 준비 진입',r:100,key:'T+0'},
+    {ico:'🔬',lbl:'검사·건강 확인',r:t1,key:'T+1개월'},
+    {ico:'📋',lbl:'리포트 열람',r:t2,key:'T+2개월'},
+    {ico:'🛡️',lbl:'보장공백 진단',r:t3,key:'T+3개월'},
+    {ico:'🤰',lbl:'임신·출산 진입',r:pconv,key:'임신 확인'},
+  ];
+  $('st-prep').innerHTML=buildTimeline(stages);
+
+  // Prep funnel
+  const base=1000;
+  const fd=[
+    {l:'임신 준비 진입',n:base,p:'100%',w:'100%',c:PUR},
+    {l:'검사 클릭/구매',n:Math.round(base*t1/100),p:t1+'%',w:t1+'%',c:'#7C3AED'},
+    {l:'리포트 열람',n:Math.round(base*t2/100),p:t2+'%',w:t2+'%',c:'#6D28D9'},
+    {l:'보장공백 진단',n:Math.round(base*t3/100),p:t3+'%',w:t3+'%',c:'#5B21B6'},
+    {l:'임신·출산 진입',n:Math.round(base*pconv/100),p:pconv+'%',w:pconv+'%',c:G},
+  ];
+  $('fw-prep').innerHTML=fd.map((f,i)=>`
+    <div class="fbar" style="width:${f.w};background:${f.c}">
+      <span>${f.l}</span><span>${fmt(f.n)}명 (${f.p})</span>
+    </div>
+    ${i<fd.length-1?'<div class="fdown">↓</div>':''}
+  `).join('');
+
+  if(!RC.pret) return;
+  RC.pret.data.datasets[0].data=[100,t1,t2,t3,pconv];
+  RC.pret.update();
+
+  $('pp-verdict').innerHTML=pconv>=40
+    ?`<div class="vstrip vs-grn">✅ 임신·출산 전환율 ${pconv}% — 검사 이후 관리 서비스로 정상 연결</div>`
+    :pconv>=25
+    ?`<div class="vstrip vs-amb">⚠️ 전환율 ${pconv}% — 검사 후 리포트 자동 발송 강화 필요</div>`
+    :`<div class="vstrip vs-red">🚨 전환율 ${pconv}% — 검사만 하고 이탈. 관리 서비스 연결 흐름 재검토 필요</div>`;
+}
+
+function updatePregnancy(){
+  const gm3=P('gm3'),gm6=P('gm6'),gm10=P('gm10'),gpb3=P('gpb3'),gpb12=P('gpb12');
+  $('kg-m3').textContent=gm3+'%';
+  $('kg-m6').textContent=gm6+'%';
+  $('kg-m10').textContent=gm10+'%';
+  $('kg-pb3').textContent=gpb3+'%';
+  $('kg-pb12').textContent=gpb12+'%';
+
+  const stages=[
+    {ico:'🤰',lbl:'임신 진입',r:100,key:'임신 1개월'},
+    {ico:'🩺',lbl:'초기 건강관리',r:gm3,key:'3개월'},
+    {ico:'💰',lbl:'출산비 관리',r:gm6,key:'6개월'},
+    {ico:'📅',lbl:'출산 직전',r:gm10,key:'10개월'},
+    {ico:'👶',lbl:'출산 재진입',r:gpb3,key:'출산 후 3개월'},
+    {ico:'📈',lbl:'장기관리 전환',r:gpb12,key:'출산 후 12개월'},
+  ];
+  $('st-pregnancy').innerHTML=buildTimeline(stages);
+
+  if(!RC.gret) return;
+  RC.gret.data.datasets[0].data=[100, gm3, gm6, gm10, Math.round(gm10*.55), gpb3, gpb12];
+  RC.gret.update();
+
+  const drops=[100-gm3, gm3-gm6, gm6-gm10, gm10-Math.round(gm10*.55), gpb3<gpb12?0:gpb3-gpb12].map(v=>Math.max(0,v));
+  const withInterv=drops.map(v=>Math.max(0,v-Math.round(v*.35)));
+  RC.gdrop.data.datasets[0].data=drops;
+  RC.gdrop.data.datasets[1].data=withInterv;
+  RC.gdrop.update();
+
+  const postBirthDrop=gm10-gpb3;
+  $('gd-verdict').innerHTML=postBirthDrop>25
+    ?`<div class="vstrip vs-red">🚨 출산 직후 ${postBirthDrop}%p 이탈 — 출산 D+7 지원금 안내 + 육아비 자동 트래킹 온보딩 필수</div>`
+    :postBirthDrop>12
+    ?`<div class="vstrip vs-amb">⚠️ 출산 직후 ${postBirthDrop}%p 이탈 — 개입 캠페인으로 ${Math.round(postBirthDrop*.35)}%p 회복 가능</div>`
+    :`<div class="vstrip vs-grn">✅ 출산 후 이탈율 관리 양호 (${postBirthDrop}%p)</div>`;
+}
+
+function buildTimeline(stages){
+  return stages.map(st=>{
+    const cl = st.r>=70?'ok':st.r>=45?'warn':st.r>=20?'drop':'gray';
+    return `<div class="stage ${cl}">
+      <div class="stage-dot">${st.ico}</div>
+      <div class="stage-lbl">${st.lbl}<br><small style="color:#9CA3AF">${st.key}</small></div>
+      <div class="stage-rate">${st.r}%</div>
+    </div>`;
+  }).join('');
+}
+
+function updateCombined(){
+  if(!RC.combined) {
+    RC.combined = mkChart('c-combined','line',{
+      labels:['이벤트 진입','1구간','2구간','3구간','4구간','5구간'],
+      datasets:[
+        {label:'결혼 준비 그룹 (M0→M12)',data:[],borderColor:BLU,backgroundColor:BLL,fill:true,tension:.4,borderWidth:2,pointRadius:4},
+        {label:'임신 준비 그룹 (T0→전환)',data:[],borderColor:PUR,backgroundColor:'rgba(139,92,246,.1)',fill:true,tension:.4,borderWidth:2,pointRadius:4},
+        {label:'임신/출산 그룹 (10개월→출산 후)',data:[],borderColor:G,backgroundColor:GL,fill:true,tension:.4,borderWidth:2,pointRadius:4},
+      ]
+    },{scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}});
+
+    RC.ltvcomp = mkChart('c-ltvcomp','line',{
+      labels:Array.from({length:37},(_,i)=>i+'개월'),
+      datasets:[
+        {label:'결혼 준비 그룹',data:[],borderColor:BLU,backgroundColor:BLL,fill:true,tension:.4,borderWidth:2,pointRadius:0},
+        {label:'임신 준비 그룹',data:[],borderColor:PUR,fill:false,tension:.4,borderWidth:2,pointRadius:0},
+        {label:'임신/출산 그룹',data:[],borderColor:G,backgroundColor:GL,fill:true,tension:.4,borderWidth:2,pointRadius:0},
+      ]
+    },{scales:{y:{ticks:{callback:v=>Math.round(v/10000)+'만'}}}});
+
+    RC.visit = mkChart('c-visit','bar',{
+      labels:['일반 금융앱','결혼 준비','신혼기','임신 준비','임신 관리','출산 후 육아'],
+      datasets:[{label:'월 평균 방문 횟수',data:[2.1,4.8,3.6,6.2,8.4,5.2],
+        backgroundColor:[GRAY,BLU,'#10B981',PUR,G,GD],borderRadius:4,borderWidth:0}]
+    },{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+'회'}}}});
+  }
+
+  RC.combined.data.datasets[0].data=[100,P('wm1'),P('wm3'),P('wm6'),P('wm12'),P('wtopreg')];
+  RC.combined.data.datasets[1].data=[100,P('pt1'),P('pt2'),P('pt3'),P('pconv'),Math.round(P('pconv')*.8)];
+  RC.combined.data.datasets[2].data=[100,P('gm3'),P('gm6'),P('gm10'),P('gpb3'),P('gpb12')];
+  RC.combined.update();
+
+  // LTV curves (approximate)
+  const arpu=4000;
+  [['wm12',BLU],['pconv',PUR],['gm10',G]].forEach(([key,_],ci)=>{
+    const ret=P(key)/100;
+    let cum=0;
+    const arr=[];
+    for(let m=0;m<=36;m++){
+      const boost=(ci===2 && m>=3 && m<=13)?1.8:1;
+      cum+=arpu*Math.pow(ret,m/6)*boost;
+      arr.push(Math.round(cum));
+    }
+    RC.ltvcomp.data.datasets[ci].data=arr;
+  });
+  RC.ltvcomp.update();
+}
+
+// ══════════════════════════════════════════════════════
+// PAGE 4 · CHURN
+// ══════════════════════════════════════════════════════
+const CC={};
+function initChurn(){
+  buildParam('p-cmau', {id:'cmau',label:'전체 MAU',min:1000,max:100000,step:500,val:12000,unit:'명',onChange:updateChurn});
+  buildParam('p-ceff', {id:'ceff',label:'캠페인 리텐션 회복율',min:5,max:65,step:1,val:35,unit:'%',onChange:updateChurn});
+  buildParam('p-cw6',  {id:'cw6', label:'결혼 직후 M6 이탈율',min:5,max:60,step:1,val:22,unit:'%',onChange:updateChurn});
+  buildParam('p-cw12', {id:'cw12',label:'결혼 M12 추가 이탈율',min:3,max:40,step:1,val:14,unit:'%',onChange:updateChurn});
+  buildParam('p-cpb',  {id:'cpb', label:'출산 직후 3개월 이탈율',min:10,max:70,step:1,val:38,unit:'%',onChange:updateChurn});
+  buildParam('p-cpb12',{id:'cpb12',label:'출산 후 3→12개월 이탈율',min:5,max:40,step:1,val:18,unit:'%',onChange:updateChurn});
+
+  CC.stage = mkChart('c-churnstage','bar',{
+    labels:['결혼 준비기','결혼 직후\nM6','신혼 안정기','임신 준비\nT+1','임신 10개월','출산 직후','육아 초기'],
+    datasets:[
+      {label:'이탈 위험도',data:[8,22,12,18,8,38,18],
+        backgroundColor:['rgba(59,130,246,.6)','rgba(239,68,68,.7)','rgba(16,185,129,.6)',
+          'rgba(245,158,11,.6)','rgba(0,196,113,.6)','rgba(239,68,68,.85)','rgba(245,158,11,.6)'],
+        borderWidth:0,borderRadius:4}
+    ]
+  },{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+'%'},title:{display:true,text:'이탈 위험도 (%)',color:'#9CA3AF'}}}});
+
+  CC.pregchurn = mkChart('c-pregchurn','line',{
+    labels:['임신\n1개월','2개월','3개월','4개월','5개월','6개월','7개월','8개월','9개월','10개월','출산\n직후','1개월','2개월','3개월'],
+    datasets:[
+      {label:'이탈 위험 (개입 無)',data:[8,7,6,8,10,12,14,18,20,18,48,42,34,28],
+        borderColor:RED,backgroundColor:RL,fill:true,tension:.4,borderWidth:2,pointRadius:3},
+      {label:'이탈 위험 (개입 有)',data:[8,7,6,8,10,12,14,18,20,18,36,28,22,18],
+        borderColor:G,backgroundColor:GL,fill:true,tension:.4,borderWidth:1.5,borderDash:[4,3],pointRadius:2},
+    ]
+  },{scales:{y:{title:{display:true,text:'이탈 위험도 (%)',color:'#9CA3AF'}}}});
+
+  CC.feat = mkChart('c-feat','bar',{
+    labels:['마지막 접속 경과일','이벤트 종료 후 경과','리포트 열람 횟수','상품 클릭 이력','부부 동시 활성','다음 이벤트 예상일','건강리포트 구독'],
+    datasets:[{label:'변수 중요도',
+      data:[0.31,0.22,0.16,0.12,0.08,0.07,0.04],
+      backgroundColor:[RED,RED,AMB,AMB,G,G,G],borderWidth:0,borderRadius:3}]
+  },{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>v.toFixed(2)}}}});
+
+  CC.roi = mkChart('c-roicmp','bar',{
+    labels:['결혼 M6\n개입','임신 준비\n검사 후','출산 직후\nD+7'],
+    datasets:[
+      {label:'캠페인 비용',data:[],backgroundColor:'rgba(239,68,68,.6)',borderWidth:0,borderRadius:3},
+      {label:'회복 LTV',  data:[],backgroundColor:'rgba(0,196,113,.7)',borderWidth:0,borderRadius:3},
+    ]
+  },{scales:{x:{grid:{display:false}},y:{ticks:{callback:v=>Math.round(v/10000)+'만'}}}});
+
+  updateChurn();
+}
+
+function updateChurn(){
+  if(!CC.stage) return;
+  const mau=P('cmau'),eff=P('ceff')/100;
+  const cw6=P('cw6')/100, cpb=P('cpb')/100;
+  const weddingPop = Math.round(mau*.35);
+  const pregPop    = Math.round(mau*.45);
+  const prepPop    = Math.round(mau*.2);
+
+  const w6n  = Math.round(weddingPop*cw6);
+  const pt1n = Math.round(prepPop*.18);
+  const pb3n = Math.round(pregPop*cpb);
+  const saveN= Math.round((w6n+pt1n+pb3n)*eff);
+
+  $('cr-w6').textContent  = fmt(w6n)+'명';
+  $('cr-pt').textContent  = fmt(pt1n)+'명';
+  $('cr-pb3').textContent = fmt(pb3n)+'명';
+  $('cr-save').textContent= fmt(saveN)+'명';
+
+  // Update stage chart with dynamic values
+  CC.stage.data.datasets[0].data=[8,P('cw6'),P('cw12'),18,8,P('cpb'),P('cpb12')];
+  CC.stage.update();
+
+  // ROI
+  const riskGroups=[w6n,pt1n,pb3n];
+  const ltv=85000, cpc=3000;
+  const costs = riskGroups.map(n=>n*cpc);
+  const saves = riskGroups.map(n=>Math.round(n*eff)*ltv);
+  CC.roi.data.datasets[0].data=costs;
+  CC.roi.data.datasets[1].data=saves;
+  CC.roi.update();
+}
+
+// ══════════════════════════════════════════════════════
+// PAGE 5 · REVENUE
+// ══════════════════════════════════════════════════════
+const RVC={};
+function initRevenue(){
+  buildParam('p-rv',    {id:'rv',   label:'월 리포트 열람자',min:1000,max:100000,step:500,val:20000,unit:'명',onChange:updateRevenue});
+  buildParam('p-rereg', {id:'rereg',label:'월 이벤트 등록자',min:500,max:50000,step:100,val:8000,unit:'명',onChange:updateRevenue});
+  buildParam('p-rctr',  {id:'rctr', label:'리포트→검사 CTR',min:1,max:30,step:0.5,val:12,unit:'%',onChange:updateRevenue});
+  buildParam('p-rcvr',  {id:'rcvr', label:'검사 페이지 CVR',min:2,max:40,step:1,val:20,unit:'%',onChange:updateRevenue});
+  buildParam('p-rcp',   {id:'rcp',  label:'부부 패키지 비율',min:5,max:75,step:1,val:40,unit:'%',onChange:updateRevenue});
+  buildParam('p-rsp',   {id:'rsp',  label:'개인 검사 단가',min:30000,max:200000,step:1000,val:89000,unit:'원',onChange:updateRevenue});
+  buildParam('p-rpp',   {id:'rpp',  label:'부부 패키지 단가',min:50000,max:350000,step:1000,val:159000,unit:'원',onChange:updateRevenue});
+  buildParam('p-ric',   {id:'ric',  label:'보험 진단 클릭율',min:5,max:65,step:1,val:35,unit:'%',onChange:updateRevenue});
+  buildParam('p-ricvr', {id:'ricvr',label:'보험 가입 전환율',min:1,max:25,step:0.5,val:10,unit:'%',onChange:updateRevenue});
+  buildParam('p-ria',   {id:'ria',  label:'보험 연결 ARPU',min:5000,max:60000,step:500,val:22000,unit:'원',onChange:updateRevenue});
+  buildParam('p-rmau',  {id:'rmau', label:'월 활성 유저 (MAU)',min:5000,max:100000,step:500,val:25000,unit:'명',onChange:updateRevenue});
+  buildParam('p-rret',  {id:'rret', label:'D30 리텐션율',min:10,max:75,step:1,val:42,unit:'%',onChange:updateRevenue});
+
+  RVC.donut = new Chart($('c-revdonut').getContext('2d'),{
+    type:'doughnut',
+    data:{labels:['개인 검사','부부 패키지','보험 수수료','제휴·기타'],
+      datasets:[{data:[0,0,0,0],backgroundColor:[BLU,G,RED,AMB],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,
+    animation:{duration:300},
+      plugins:{legend:{labels:{boxWidth:10,font:{size:11}}}},cutout:'62%'}
+  });
+
+  RVC.scenario = mkChart('c-scenario','bar',{
+    labels:['보수적\n(×0.5)','기본\n(×1.0)','낙관적\n(×1.6)'],
+    datasets:[
+      {label:'검사 수익',data:[],backgroundColor:'rgba(59,130,246,.7)',borderRadius:3,borderWidth:0},
+      {label:'보험 수수료',data:[],backgroundColor:G,borderRadius:3,borderWidth:0},
+      {label:'제휴·기타',data:[],backgroundColor:'rgba(245,158,11,.7)',borderRadius:3,borderWidth:0},
+    ]
+  },{scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,ticks:{callback:v=>Math.round(v/10000)+'만'}}}});
+
+  RVC.sens = mkChart('c-sensitivity','line',{
+    labels:[5,10,20,30,50,80,100].map(v=>v+'K명'),
+    datasets:[
+      {label:'리텐션 20%',data:[],borderColor:RED,borderWidth:2,tension:.3,pointRadius:3,fill:false},
+      {label:'리텐션 40%',data:[],borderColor:AMB,borderWidth:2,tension:.3,pointRadius:3,fill:false},
+      {label:'리텐션 60%',data:[],borderColor:G,borderWidth:2,tension:.3,pointRadius:3,fill:false},
+    ]
+  },{scales:{y:{ticks:{callback:v=>Math.round(v/10000)+'만'}}}});
+
+  updateRevenue();
+}
+
+function updateRevenue(){
+  if(!RVC.donut) return;
+  const rv=P('rv'),ctr=P('rctr')/100,cvr=P('rcvr')/100,cp=P('rcp')/100;
+  const sp=P('rsp'),pp=P('rpp'),ic=P('ric')/100,icvr=P('ricvr')/100,ia=P('ria');
+  const mau=P('rmau'),ret=P('rret')/100;
+
+  const clicks=Math.round(rv*ctr);
+  const buyers=Math.round(clicks*cvr);
+  const coupleB=Math.round(buyers*cp), soloB=buyers-coupleB;
+  const testRev=soloB*sp+coupleB*pp;
+  const insUsers=Math.round(rv*ic*icvr);
+  const insRev=insUsers*ia;
+  const other=Math.round(rv*0.015*3000);
+  const total=testRev+insRev+other;
+
+  $('kr-test').textContent=fmtW(testRev);
+  $('kr-ins').textContent=fmtW(insRev);
+  $('kr-tot').textContent=fmtW(total);
+  $('kr-arpu').textContent='₩'+fmt(Math.round(total/Math.max(1,mau*ret)));
+  $('kr-verdict').innerHTML=total>=80000000
+    ?`<div class="drop-badge db-grn">✅ 낙관 목표</div>`
+    :total>=30000000
+    ?`<div class="drop-badge db-amb">⚠️ 기본 목표</div>`
+    :`<div class="drop-badge db-red">🚨 보수적 수준</div>`;
+
+  RVC.donut.data.datasets[0].data=[soloB*sp,coupleB*pp,insRev,other].map(Math.round);
+  RVC.donut.update();
+
+  const sc=[0.5,1,1.6];
+  RVC.scenario.data.datasets[0].data=sc.map(x=>Math.round(testRev*x));
+  RVC.scenario.data.datasets[1].data=sc.map(x=>Math.round(insRev*x));
+  RVC.scenario.data.datasets[2].data=sc.map(x=>Math.round(other*x));
+  RVC.scenario.update();
+
+  const mauArr=[5,10,20,30,50,80,100].map(v=>v*1000);
+  const rets=[0.2,0.4,0.6];
+  RVC.sens.data.datasets.forEach((ds,i)=>{
+    ds.data=mauArr.map(m=>Math.round((testRev+insRev)*(rets[i]/Math.max(0.1,ret))*(m/Math.max(1,mau))));
+  });
+  RVC.sens.update();
+
+  // Revenue funnel
+  const fd=[
+    {l:'리포트 열람자',n:rv,p:'100%',w:'100%',c:'#3B82F6'},
+    {l:'검사 페이지 클릭',n:clicks,p:Math.round(ctr*100)+'%',w:Math.max(15,Math.round(ctr*100*5))+'%',c:'#10B981'},
+    {l:'검사 구매 완료',n:buyers,p:Math.round(cvr*100)+'%',w:Math.max(10,Math.round(cvr*100*4))+'%',c:G},
+    {l:'부부 패키지 구매',n:coupleB,p:Math.round(cp*100)+'%',w:Math.max(8,Math.round(cp*100*2))+'%',c:GD},
+  ];
+  $('fw-rev').innerHTML=fd.map((f,i)=>`
+    <div class="fbar" style="width:${f.w};background:${f.c}">
+      <span style="font-size:11px">${f.l}</span><span>${fmt(f.n)}명 (${f.p})</span>
+    </div>
+    ${i<fd.length-1?'<div class="fdown">↓</div>':''}
+  `).join('');
+}
+
+// ── Roadmap lifecycle tabs ────────────────────────────
+function rmTab(idx){
+  document.querySelectorAll('#rm-tabs .itab').forEach(function(t,j){
+    t.classList.toggle('on', j===idx);
+  });
+  document.querySelectorAll('.rm-panel').forEach(function(p,j){
+    p.classList.toggle('on', j===idx);
+  });
+}
+</script>
+</body>
+</html>
